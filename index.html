@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Queue Switcher</title>
+    <script src="https://sdk-cdn.mypurecloud.com/client-apps/2.6.3/purecloud-client-app-sdk-de77761d.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 24px;
+        }
+
+        h1 {
+            color: #ff4f1f;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        select, button {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        select {
+            background: white;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #ff4f1f;
+            box-shadow: 0 0 0 3px rgba(255, 79, 31, 0.1);
+        }
+
+        button {
+            background: #ff4f1f;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #e64619;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .current-config {
+            background: #f8f9fa;
+            border-left: 4px solid #ff4f1f;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+
+        .current-config h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .current-config .value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #0c5460;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Facebook Queue Switcher</h1>
+        <p class="subtitle">Quickly switch Facebook Messenger integrations between queues</p>
+
+        <div class="info-box">
+            ℹ️ Changes take effect immediately. No flow publish needed.
+        </div>
+
+        <div id="currentConfig" class="current-config" style="display: none;">
+            <h3>Current Configuration</h3>
+            <div class="value" id="currentQueueDisplay">-</div>
+        </div>
+
+        <div class="form-group">
+            <label for="integration">Select Integration</label>
+            <select id="integration">
+                <option value="">-- Select Integration --</option>
+                <option value="2a030457-5b57-49ab-a6b7-22a115fa4eef">FB: Asia North LMS</option>
+                <option value="b54aab5e-07b9-40b8-8aba-ac81a3099e86">FB: Asia LMS</option>
+                <option value="77d39cbe-cbcd-419d-85c6-6c666b5899be">FB: Philippines LMS</option>
+                <option value="c239025e-57dd-4e45-87a4-61017f132522">FB: North America LMS</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="queue">Select Target Queue</label>
+            <select id="queue">
+                <option value="">-- Loading queues... --</option>
+            </select>
+        </div>
+
+        <button id="switchBtn" disabled>Switch Queue</button>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        // Integration metadata
+        const INTEGRATIONS = {
+            '2a030457-5b57-49ab-a6b7-22a115fa4eef': {
+                name: 'Asia North',
+                platform: 'facebook',
+                area_name: 'Asia North',
+                department: 'LMS',
+                integration_name: 'FB: Asia North LMS',
+                facebook_page_id: '914182465105659',
+                active: true
+            },
+            'b54aab5e-07b9-40b8-8aba-ac81a3099e86': {
+                name: 'Asia',
+                platform: 'facebook',
+                area_name: 'Asia',
+                department: 'LMS',
+                integration_name: 'FB: Asia LMS',
+                facebook_page_id: '866315663234719',
+                active: true
+            },
+            '77d39cbe-cbcd-419d-85c6-6c666b5899be': {
+                name: 'Philippines',
+                platform: 'facebook',
+                area_name: 'Philippines',
+                department: 'LMS',
+                integration_name: 'FB: Philippines LMS',
+                facebook_page_id: '797684873439495',
+                active: true
+            },
+            'c239025e-57dd-4e45-87a4-61017f132522': {
+                name: 'North America',
+                platform: 'facebook',
+                area_name: 'North America',
+                department: 'LMS',
+                integration_name: 'FB: North America LMS',
+                facebook_page_id: '972604412596068',
+                active: true
+            }
+        };
+
+        const DATA_TABLE_ID = 'ac77d4e0-f41b-43f9-aee2-7d9e58606d7a';
+        let platformClient;
+        let queues = [];
+
+        // Initialize the Genesys Cloud Client App
+        async function initializeApp() {
+            try {
+                showStatus('Connecting to Genesys Cloud...', 'loading');
+
+                const clientApp = new window.purecloud.apps.ClientApp({
+                    pcEnvironment: 'usw2.pure.cloud'
+                });
+
+                // Get authenticated client
+                const client = await clientApp.platformClient();
+                platformClient = client;
+
+                showStatus('Loading queues...', 'loading');
+                await loadQueues();
+
+                hideStatus();
+                document.getElementById('switchBtn').disabled = false;
+
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showStatus('Failed to connect to Genesys Cloud: ' + error.message, 'error');
+            }
+        }
+
+        // Load all queues
+        async function loadQueues() {
+            try {
+                const routingApi = new platformClient.RoutingApi();
+                const response = await routingApi.getRoutingQueues({ pageSize: 100 });
+
+                queues = response.entities;
+
+                const queueSelect = document.getElementById('queue');
+                queueSelect.innerHTML = '<option value="">-- Select Queue --</option>';
+
+                queues
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .forEach(queue => {
+                        const option = document.createElement('option');
+                        option.value = queue.id;
+                        option.textContent = queue.name;
+                        queueSelect.appendChild(option);
+                    });
+
+            } catch (error) {
+                console.error('Error loading queues:', error);
+                showStatus('Failed to load queues: ' + error.message, 'error');
+            }
+        }
+
+        // Load current configuration for selected integration
+        async function loadCurrentConfig(integrationId) {
+            try {
+                const architectApi = new platformClient.ArchitectApi();
+                const row = await architectApi.getFlowsDatatableRow(DATA_TABLE_ID, integrationId);
+
+                if (row.queue_name) {
+                    document.getElementById('currentQueueDisplay').textContent = row.queue_name;
+                    document.getElementById('currentConfig').style.display = 'block';
+                } else {
+                    document.getElementById('currentConfig').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading current config:', error);
+                document.getElementById('currentConfig').style.display = 'none';
+            }
+        }
+
+        // Switch queue
+        async function switchQueue() {
+            const integrationId = document.getElementById('integration').value;
+            const queueId = document.getElementById('queue').value;
+
+            if (!integrationId || !queueId) {
+                showStatus('Please select both integration and queue', 'error');
+                return;
+            }
+
+            const integration = INTEGRATIONS[integrationId];
+            const queue = queues.find(q => q.id === queueId);
+
+            if (!queue) {
+                showStatus('Selected queue not found', 'error');
+                return;
+            }
+
+            try {
+                showStatus(`Switching ${integration.name} to ${queue.name}...`, 'loading');
+                document.getElementById('switchBtn').disabled = true;
+
+                // Prepare complete row data
+                const rowData = {
+                    key: integrationId,
+                    platform: integration.platform,
+                    queue_id: queueId,
+                    queue_name: queue.name,
+                    area_name: integration.area_name,
+                    department: integration.department,
+                    integration_name: integration.integration_name,
+                    facebook_page_id: integration.facebook_page_id,
+                    active: integration.active
+                };
+
+                const architectApi = new platformClient.ArchitectApi();
+                await architectApi.putFlowsDatatableRow(DATA_TABLE_ID, integrationId, { body: rowData });
+
+                showStatus(`✓ Successfully switched ${integration.name} to ${queue.name}!`, 'success');
+
+                // Update current config display
+                await loadCurrentConfig(integrationId);
+
+            } catch (error) {
+                console.error('Error switching queue:', error);
+                showStatus('Failed to switch queue: ' + error.message, 'error');
+            } finally {
+                document.getElementById('switchBtn').disabled = false;
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+
+            if (type === 'loading') {
+                statusDiv.innerHTML = `<span class="loading-spinner"></span>${message}`;
+            } else {
+                statusDiv.textContent = message;
+            }
+        }
+
+        // Hide status message
+        function hideStatus() {
+            document.getElementById('status').style.display = 'none';
+        }
+
+        // Event listeners
+        document.getElementById('integration').addEventListener('change', (e) => {
+            if (e.target.value) {
+                loadCurrentConfig(e.target.value);
+            } else {
+                document.getElementById('currentConfig').style.display = 'none';
+            }
+        });
+
+        document.getElementById('switchBtn').addEventListener('click', switchQueue);
+
+        // Initialize on load
+        initializeApp();
+    </script>
+</body>
+</html>
