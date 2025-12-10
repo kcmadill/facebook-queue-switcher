@@ -254,9 +254,8 @@
                     pcEnvironment: 'usw2.pure.cloud'
                 });
 
-                // Get authenticated client
-                const client = await clientApp.platformClient();
-                platformClient = client;
+                // Get authenticated client (property, not a function)
+                platformClient = clientApp.gc;
 
                 showStatus('Loading queues...', 'loading');
                 await loadQueues();
