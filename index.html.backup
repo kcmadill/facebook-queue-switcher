@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facebook Queue Switcher</title>
     <script src="https://sdk-cdn.mypurecloud.com/client-apps/2.6.3/purecloud-client-app-sdk-de77761d.min.js"></script>
-    <script src="https://sdk-cdn.mypurecloud.com/javascript/177.0.0/purecloud-platform-client-v2.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -243,11 +242,7 @@
         };
 
         const DATA_TABLE_ID = 'ac77d4e0-f41b-43f9-aee2-7d9e58606d7a';
-        const PC_ENVIRONMENT = 'usw2.pure.cloud';
-        let clientApp;
-        let platformClient = window.platformClient;
-        let routingApi;
-        let architectApi;
+        let platformClient;
         let queues = [];
 
         // Initialize the Genesys Cloud Client App
@@ -255,26 +250,12 @@
             try {
                 showStatus('Connecting to Genesys Cloud...', 'loading');
 
-                // Initialize Client App SDK
-                clientApp = new window.purecloud.apps.ClientApp({
-                    pcEnvironment: PC_ENVIRONMENT
+                const clientApp = new window.purecloud.apps.ClientApp({
+                    pcEnvironment: 'usw2.pure.cloud'
                 });
 
-                // Wait for app to bootstrap (authentication handled by Genesys)
-                await clientApp.lifecycle.bootstrapped;
-                console.log('Client App bootstrapped successfully');
-
-                // Configure Platform Client
-                const client = platformClient.ApiClient.instance;
-                client.setEnvironment(PC_ENVIRONMENT);
-
-                // Use the authenticated session from the Client App
-                // The Platform Client will automatically use the authenticated session
-                // from the embedded app context
-
-                // Initialize API instances
-                routingApi = new platformClient.RoutingApi();
-                architectApi = new platformClient.ArchitectApi();
+                // Use clientApp directly for API calls
+                platformClient = clientApp;
 
                 showStatus('Loading queues...', 'loading');
                 await loadQueues();
@@ -291,7 +272,9 @@
         // Load all queues
         async function loadQueues() {
             try {
-                const response = await routingApi.getRoutingQueues({ pageSize: 100 });
+                // Use clientApp API methods directly
+                const response = await platformClient.routing.getQueues({ pageSize: 100 });
+
                 queues = response.entities;
 
                 const queueSelect = document.getElementById('queue');
@@ -315,7 +298,8 @@
         // Load current configuration for selected integration
         async function loadCurrentConfig(integrationId) {
             try {
-                const row = await architectApi.getFlowsDatatableRow(DATA_TABLE_ID, integrationId);
+                // Use clientApp API methods directly
+                const row = await platformClient.architect.getDataTableRow(DATA_TABLE_ID, integrationId);
 
                 if (row.queue_name) {
                     document.getElementById('currentQueueDisplay').textContent = row.queue_name;
@@ -364,8 +348,8 @@
                     active: integration.active
                 };
 
-                // Update data table row
-                await architectApi.putFlowsDatatableRow(DATA_TABLE_ID, integrationId, { body: rowData });
+                // Use clientApp API methods directly
+                await platformClient.architect.updateDataTableRow(DATA_TABLE_ID, integrationId, rowData);
 
                 showStatus(`✓ Successfully switched ${integration.name} to ${queue.name}!`, 'success');
 
