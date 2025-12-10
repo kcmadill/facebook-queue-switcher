@@ -255,7 +255,7 @@
                 });
 
                 // Get authenticated client
-                const client = await clientApp.platformClient();
+                platformClient = clientApp.gc;
                 platformClient = client;
 
                 showStatus('Loading queues...', 'loading');
