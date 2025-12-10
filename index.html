@@ -255,7 +255,7 @@
                 });
 
                 // Get authenticated client
-                platformClient = clientApp.gc;
+                platformClient = clientApp;
 
                 showStatus('Loading queues...', 'loading');
                 await loadQueues();
@@ -272,8 +272,7 @@
         // Load all queues
         async function loadQueues() {
             try {
-                const routingApi = new platformClient.RoutingApi();
-                const response = await routingApi.getRoutingQueues({ pageSize: 100 });
+                const response = await platformClient.routing.getQueues({ pageSize: 100 });
 
                 queues = response.entities;
 
@@ -298,8 +297,7 @@
         // Load current configuration for selected integration
         async function loadCurrentConfig(integrationId) {
             try {
-                const architectApi = new platformClient.ArchitectApi();
-                const row = await architectApi.getFlowsDatatableRow(DATA_TABLE_ID, integrationId);
+                const row = await platformClient.architect.getDataTableRow(DATA_TABLE_ID, integrationId);
 
                 if (row.queue_name) {
                     document.getElementById('currentQueueDisplay').textContent = row.queue_name;
@@ -348,8 +346,7 @@
                     active: integration.active
                 };
 
-                const architectApi = new platformClient.ArchitectApi();
-                await architectApi.putFlowsDatatableRow(DATA_TABLE_ID, integrationId, { body: rowData });
+                await platformClient.architect.updateDataTableRow(DATA_TABLE_ID, integrationId, rowData);
 
                 showStatus(`✓ Successfully switched ${integration.name} to ${queue.name}!`, 'success');
 
